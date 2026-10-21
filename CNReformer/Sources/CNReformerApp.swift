@@ -9,13 +9,13 @@ struct CNReformerApp: App {
     var body: some Scene { WindowGroup { RootView().environmentObject(store).tint(Color(red: 0.12, green: 0.30, blue: 0.48)) } }
 }
 
-private enum AppView: String, CaseIterable { case calendar = "Calendar", documents = "Documents", library = "Library"
-    var icon: String { switch self { case .calendar: "calendar"; case .documents: "list.bullet"; case .library: "books.vertical" } }
+private enum AppView: String, CaseIterable { case calendar = "Calendar", documents = "Documents", library = "Library", bible = "Bible"
+    var icon: String { switch self { case .calendar: "calendar"; case .documents: "list.bullet"; case .library: "books.vertical"; case .bible: "book" } }
 }
 
 struct RootView: View {
     @EnvironmentObject private var store: LibraryStore
-    @State private var tab = AppView.calendar
+    @AppStorage("selectedTab") private var tab = AppView.calendar
     @State private var selected: RemoteDocument?
     @State private var search = ""
     @State private var language = "All languages"
@@ -28,7 +28,7 @@ struct RootView: View {
     }
     var body: some View {
         TabView(selection: $tab) {
-            ForEach(AppView.allCases, id: \.self) { page in
+            ForEach([AppView.calendar, .documents], id: \.self) { page in
                 NavigationSplitView {
                     VStack(spacing: 0) {
                         sourceBanner
@@ -40,8 +40,7 @@ struct RootView: View {
                             } actions: { Button("Connect Shared Folder") { showConnection = true }.buttonStyle(.borderedProminent) }
                         } else if page == .calendar { calendar }
                         else if filtered.isEmpty { ContentUnavailableView.search(text: search) }
-                        else if page == .documents { documentList }
-                        else { libraryGrid }
+                        else { documentList }
                     }
                     .navigationTitle(page == .calendar ? "Preaching Calendar" : page.rawValue)
                     .searchable(text: $search, prompt: "Title, category, or language")
@@ -65,6 +64,10 @@ struct RootView: View {
                 }
                 .tabItem { Label(page.rawValue, systemImage: page.icon) }.tag(page)
             }
+            BlogLibraryView()
+                .tabItem { Label("Library", systemImage: "books.vertical") }.tag(AppView.library)
+            BibleReadingView()
+                .tabItem { Label("Bible", systemImage: "book") }.tag(AppView.bible)
         }
         .sheet(isPresented: $showConnection) { ConnectionView() }
         .alert("Shared Library", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK") { store.error = nil } } message: { Text(store.error ?? "") }
@@ -95,21 +98,6 @@ struct RootView: View {
             Spacer()
             Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
         }.padding(.vertical, 6)
-    }
-    private var libraryGrid: some View {
-        ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 155, maximum: 240))], spacing: 18) {
-                ForEach(filtered) { document in
-                    Button { selected = document } label: {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ThumbnailView(document: document).frame(height: 180).frame(maxWidth: .infinity).background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
-                            Text(document.title).font(.headline).lineLimit(2).frame(height: 46, alignment: .topLeading)
-                            Text(document.category ?? document.fileType.uppercased()).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                        }.padding(12).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))
-                    }.buttonStyle(.plain)
-                }
-            }.padding()
-        }.background(Color(.systemGroupedBackground)).refreshable { await store.refresh() }
     }
     private var calendar: some View {
         ScrollView {
@@ -204,20 +192,6 @@ struct FolderPicker: UIViewControllerRepresentable {
         init(_ completion: @escaping (URL?) -> Void) { self.completion = completion }
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) { completion(urls.first) }
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { completion(nil) }
-    }
-}
-struct ThumbnailView: View {
-    @EnvironmentObject private var store: LibraryStore
-    let document: RemoteDocument
-    @State private var thumbnail: UIImage?
-    var body: some View {
-        Group {
-            if let thumbnail { Image(uiImage: thumbnail).resizable().scaledToFit() }
-            else { VStack(spacing: 12) { Image(systemName: "doc.richtext").font(.system(size: 44, weight: .light)); Text(document.fileType.uppercased()).font(.caption.bold()) }.foregroundStyle(.tint) }
-        }.task(id: document) {
-            let url = store.cachedURL(for: document)
-            if document.fileType == "pdf", let pdf = PDFDocument(url: url), let page = pdf.page(at: 0) { thumbnail = page.thumbnail(of: CGSize(width: 300, height: 400), for: .cropBox) }
-        }
     }
 }
 struct ReaderView: View {

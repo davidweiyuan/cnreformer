@@ -1,10 +1,13 @@
 # cnreformer for iPhone and iPad
 
-Native SwiftUI app for iOS/iPadOS 17+, modeled on Cornerstone-DocApp's three views:
+Native SwiftUI app for iOS/iPadOS 17+, with four tabs:
 
 - **Calendar**: monthly calendar with dated document entries that open the reader. Dates come from catalog metadata or Cornerstone-style filenames.
 - **Documents**: searchable document list with language filtering.
-- **Library**: adaptive card grid with cached PDF thumbnails and a PDFKit / Quick Look reader.
+- **Library**: links to posts from davidweiyuan.wordpress.com, with search and older-post pagination.
+- **Bible**: English LSB and Chinese FHL web readers.
+
+Documents open in a PDFKit / Quick Look reader from Documents or Calendar.
 
 Sources stay read-only. The app remembers the connection and document index, recursively lists a selected provider folder, and caches documents when opened. Refresh Folder updates the index; Reload from Source in the reader updates a cached document. Previously opened documents remain readable offline. Switching folders replaces the visible index but retains the private cache. Search covers titles and supplied categories/languages, not document contents.
 
@@ -42,6 +45,25 @@ An ordinary OneDrive sharing URL is an HTML page, not a web catalog. Direct Micr
 
 ## Validation and scope
 
-The simulator SDK build is checked for arm64 and x86_64. Core tests cover valid/invalid filename dates, relative URL resolution, duplicate IDs, unsupported catalog versions, and rejection of unsafe URLs/file types. No simulator runtimes are installed on the development machine, so interactive iPhone/iPad validation has not been performed. Physical-device OneDrive access requires testing with your account. App Store signing, icon artwork, Microsoft OAuth, Google Calendar, OCR, annotations, and slide assembly remain outside this first mobile version.
+The simulator SDK build is checked for arm64 and x86_64. Core tests cover valid/invalid filename dates, relative URL resolution, duplicate IDs, unsupported catalog versions, and rejection of unsafe URLs/file types. The app has been launched in iPhone and iPad simulators. The Bible tab has been visually verified loading John 1 from the live LSB website on iPad. Physical-device OneDrive access requires testing with your account. App Store signing, icon artwork, Microsoft OAuth, Google Calendar, OCR, annotations, and slide assembly remain outside this first mobile version.
 
 References: [Apple directory access](https://developer.apple.com/documentation/uikit/providing-access-to-directories), [Microsoft shared-item API](https://learn.microsoft.com/en-us/graph/api/shares-get?view=graph-rest-1.0).
+
+## Bible reading
+
+The **Bible / 聖經** tab provides two online readers:
+
+- **English · LSB** opens the [Legacy Standard Bible reader](https://read.lsbible.org/).
+- **中文 · 信望愛** opens the [FHL responsive Chinese Bible reader](https://bible.fhl.net/NNUI/_rwd/), linked from [bible.fhl.net](https://bible.fhl.net/index.html).
+
+Use the language selector above the reader to switch. Each source retains its own web view, navigation history, and last-opened URL; the selected language is remembered across launches. The existing English saved location is preserved. The two passages are independent, not automatically synchronized. Use each site's passage search, book/chapter controls, translation options, and reading settings. No shared-folder connection is required.
+
+The native toolbar provides Back, Forward, Bible Home, Reload, Share, and Open in Browser for the selected source. Bible reading requires internet access. Loading and website/network errors are shown with a retry action. Scripture is displayed directly from the publishers' websites with their attribution and controls intact, not bundled or downloaded as an offline Bible. Website preferences use the embedded browser's persistent website storage. External publisher links open in the system browser; older same-host HTTP links are upgraded to HTTPS. Website availability and features are controlled by the respective providers.
+
+Validation: simulator SDK build and six core tests pass. English John 1 and the Chinese FHL reader have both been visually verified on the iPad Pro simulator. Source-policy tests cover independent saved locations, host restrictions, and HTTPS upgrades preserving passage query parameters and fragments.
+
+## Blog Library
+
+Library loads public posts from [朝聖之旅](https://davidweiyuan.wordpress.com/) using the WordPress.com posts API. It shows 25 posts at a time, newest first, with publication dates. Submit a search to search across the blog, load older posts for more results, and pull to refresh. Tap a post to open its original URL in an in-app Safari browser with Reader mode when available. Use Done to return to the list. Internet access is required; network errors offer a retry. No WordPress sign-in or shared-folder setup is needed.
+
+Document browsing and shared-folder controls remain in Documents; dated documents remain available from Calendar. Library no longer shows document cards. Blog tests cover API response decoding, title entities, URL validation, and pagination/search query encoding.
